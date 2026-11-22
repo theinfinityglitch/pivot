@@ -16,7 +16,7 @@ Being fully customizable using CSS and custom plugins, this is a ultimate build 
 
 # Roadmap (0.1.0)
 
-- [ ] Project setup: Clear exit setup + basic app loop
+- [x] Project setup: Clear exit setup + basic app loop
 - [ ] Message handling via IPC
 - [ ] Make a binding for EGL
 - [ ] Open a basic layer shell client and clear it with OpenGL
