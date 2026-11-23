@@ -8,6 +8,7 @@ const log = std.log.scoped(.main);
 const usage =
     \\usage:
     \\  pivot                 start the daemon
+    \\  pivot help            print this help message
     \\  pivot msg <command>   talk to a running daemon
     \\
     \\commands: toggle, show, hide, status, quit
