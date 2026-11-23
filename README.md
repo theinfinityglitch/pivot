@@ -18,7 +18,7 @@ Being fully customizable using CSS and custom plugins, this is a ultimate build 
 
 - [x] Project setup: Clear exit setup + basic app loop
 - [x] Message handling via IPC
-- [ ] Make a binding for EGL
+- [x] Make a binding for EGL
 - [ ] Open a basic layer shell client and clear it with OpenGL
 - [ ] Scan for the Lua config entry file (config.lua)
 - [ ] Start a LuaJIT VM for the config
