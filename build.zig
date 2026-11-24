@@ -1,8 +1,18 @@
 const std = @import("std");
+const Scanner = @import("wayland").Scanner;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+
+    const scanner = Scanner.create(b, .{});
+    scanner.addSystemProtocol("stable/xdg-shell/xdg-shell.xml");
+    scanner.addCustomProtocol(b.path("protocols/wlr-layer-shell-unstable-v1.xml"));
+    scanner.generate("wl_compositor", 4);
+    scanner.generate("wl_output", 4);
+    scanner.generate("zwlr_layer_shell_v1", 5);
+
+    const wayland = b.createModule(.{ .root_source_file = scanner.result });
 
     const exe = b.addExecutable(.{
         .name = "pivot",
@@ -10,7 +20,7 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
-            .imports = &.{},
+            .imports = &.{.{ .name = "wayland", .module = wayland }},
         }),
     });
 
