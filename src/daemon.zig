@@ -2,10 +2,10 @@ const std = @import("std");
 const posix = std.posix;
 const linux = std.os.linux;
 const Io = std.Io;
+const log = std.log.scoped(.daemon);
+
 const ipc = @import("ipc.zig");
 const Client = @import("client.zig").Client;
-
-const log = std.log.scoped(.daemon);
 
 var wake_fd: posix.fd_t = -1;
 

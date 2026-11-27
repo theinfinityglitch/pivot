@@ -37,11 +37,7 @@ pub const Client = struct {
         };
         log.info("zwlr_layer_shell_v1 bound at version {d}", .{layer_shell.getVersion()});
 
-        return .{
-            .display = display,
-            .compositor = compositor,
-            .layer_shell = layer_shell,
-        };
+        return .{ .display = display, .compositor = compositor, .layer_shell = layer_shell };
     }
 
     pub fn deinit(self: *Client) void {

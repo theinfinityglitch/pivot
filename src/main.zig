@@ -1,9 +1,9 @@
 const std = @import("std");
 const Io = std.Io;
+const log = std.log.scoped(.main);
+
 const ipc = @import("ipc.zig");
 const daemon = @import("daemon.zig");
-
-const log = std.log.scoped(.main);
 
 const usage =
     \\usage:

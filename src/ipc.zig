@@ -1,7 +1,6 @@
 const std = @import("std");
 const Io = std.Io;
 const net = Io.net;
-
 const log = std.log.scoped(.ipc);
 
 pub const Command = enum {
