@@ -1,5 +1,5 @@
 <h1 align="center">Pivot</h1>
-<h4 align="center">A small but powerful launcher with a Lua runtime</h4>
+<h4 align="center">A lightweight and hackable Wayland launcher</h4>
 
 **Pivot** is a lightweight focussed launcher for wayland (x11 not planned for now) desktops. On it's simplest form excluding the default plugins, it's just a layer shell client that handles input focus and a LuaJIT runtime.
 
