@@ -3,6 +3,7 @@ const posix = std.posix;
 const linux = std.os.linux;
 const Io = std.Io;
 const ipc = @import("ipc.zig");
+const Client = @import("client.zig").Client;
 
 const log = std.log.scoped(.daemon);
 
@@ -42,6 +43,9 @@ pub fn runDaemon(io: Io, path: []const u8) !void {
     };
     posix.sigaction(.INT, &sa, null);
     posix.sigaction(.TERM, &sa, null);
+
+    var client = try Client.init();
+    defer client.deinit();
 
     var server = try ipc.Server.init(io, path);
     defer server.deinit(); // closes the listener and removes the socket file
