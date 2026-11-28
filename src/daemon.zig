@@ -2,6 +2,7 @@ const std = @import("std");
 const posix = std.posix;
 const linux = std.os.linux;
 const Io = std.Io;
+const Allocator = std.mem.Allocator;
 const log = std.log.scoped(.daemon);
 
 const ipc = @import("ipc.zig");
@@ -15,6 +16,9 @@ fn onSignal(_: posix.SIG) callconv(.c) void {
 }
 
 const State = struct {
+    gpa: Allocator,
+    client: *Client,
+
     visible: bool = false,
     quit: bool = false,
 
@@ -31,7 +35,7 @@ const State = struct {
     }
 };
 
-pub fn runDaemon(io: Io, path: []const u8) !void {
+pub fn runDaemon(gpa: Allocator, io: Io, path: []const u8) !void {
     const rc = linux.eventfd(0, linux.EFD.CLOEXEC | linux.EFD.NONBLOCK);
     if (linux.errno(rc) != .SUCCESS) return error.EventFdFailed;
     wake_fd = @intCast(rc);
@@ -51,18 +55,18 @@ pub fn runDaemon(io: Io, path: []const u8) !void {
     defer server.deinit(); // closes the listener and removes the socket file
     log.info("listening on {s}", .{path});
 
-    var state: State = .{};
-
-    var fds = [_]posix.pollfd{
-        .{ .fd = wake_fd, .events = posix.POLL.IN, .revents = 0 },
-        .{ .fd = server.fd(), .events = posix.POLL.IN, .revents = 0 },
-    };
+    var state: State = .{ .gpa = gpa, .client = &client };
 
     while (!state.quit) {
-        _ = posix.poll(&fds, -1) catch |err| switch (err) {
-            error.SystemResources => return err,
-            else => continue,
+        var fds = [_]posix.pollfd{
+            .{ .fd = wake_fd, .events = posix.POLL.IN, .revents = 0 },
+            .{ .fd = server.fd(), .events = posix.POLL.IN, .revents = 0 },
         };
+
+        // hasWork not implemented yet
+        const timeout: i32 = if (state.hasWork()) 0 else -1;
+
+        _ = posix.poll(&fds, timeout) catch 0;
 
         if (fds[0].revents != 0) {
             log.info("signal received", .{});
