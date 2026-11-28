@@ -6,6 +6,13 @@ const wl = wayland.client.wl;
 const egl = @import("egl.zig");
 const gl = @import("gl");
 
+var gl_procs: gl.ProcTable = undefined;
+var gl_loaded = false;
+
+fn getProcAddress(name: [*:0]const u8) ?gl.PROC {
+    return @ptrCast(@alignCast(egl.eglGetProcAddress(name)));
+}
+
 pub const Gfx = struct {
     display: egl.Display,
     config: egl.Config,
@@ -67,4 +74,45 @@ pub const Gfx = struct {
         _ = egl.eglTerminate(self.display);
         _ = egl.eglReleaseThread();
     }
+
+    pub fn createSurface(self: *Gfx, window: *wl.EglWindow) !egl.Surface {
+        return egl.eglCreatePlatformWindowSurface(self.display, self.config, window, null) orelse {
+            egl.logError(log, "eglCreatePlatformWindowSurface");
+            return error.SurfaceCreationFailed;
+        };
+    }
+
+    pub fn destroySurface(self: *Gfx, surface: egl.Surface) void {
+        _ = egl.eglMakeCurrent(self.display, null, null, null);
+        _ = egl.eglDestroySurface(self.display, surface);
+    }
+
+    pub fn bind(self: *Gfx, surface: egl.Surface) !void {
+        if (egl.eglMakeCurrent(self.display, surface, surface, self.context) != egl.TRUE) {
+            egl.logError(log, "eglMakeCurrent");
+            return error.MakeCurrentFailed;
+        }
+
+        if (egl.eglSwapInterval(self.display, 0) != egl.TRUE) egl.logError(log, "eglSwapInterval");
+
+        if (!gl_loaded) {
+            if (!gl_procs.init(getProcAddress)) return error.GlLoadFailed;
+            gl.makeProcTableCurrent(&gl_procs);
+            gl_loaded = true;
+            log.info("GL_RENDERER: {s}", .{glString(gl.RENDERER)});
+            log.info("GL_VERSION:  {s}", .{glString(gl.VERSION)});
+        }
+    }
+
+    pub fn swap(self: *Gfx, surface: egl.Surface) !void {
+        if (egl.eglSwapBuffers(self.display, surface) != egl.TRUE) {
+            egl.logError(log, "eglSwapBuffers");
+            return error.SwapFailed;
+        }
+    }
 };
+
+fn glString(name: gl.@"enum") []const u8 {
+    const s = gl.GetString(name) orelse return "?";
+    return std.mem.span(s);
+}

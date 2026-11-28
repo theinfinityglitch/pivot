@@ -5,6 +5,8 @@ const log = std.log.scoped(.panel);
 const wayland = @import("wayland");
 const wl = wayland.client.wl;
 const zwlr = wayland.client.zwlr;
+const egl = @import("egl.zig");
+const gl = @import("gl");
 const Client = @import("client.zig").Client;
 const Gfx = @import("gfx.zig").Gfx;
 
@@ -14,12 +16,20 @@ pub const Panel = struct {
 
     surface: *wl.Surface,
     layer_surface: *zwlr.LayerSurfaceV1,
+    target: ?Target = null,
 
     configured: bool = false,
     closed: bool = false,
     needs_redraw: bool = false,
     width: u32 = 640,
     height: u32 = 360,
+
+    const Target = struct {
+        window: *wl.EglWindow,
+        surface: egl.Surface,
+        width: u32,
+        height: u32,
+    };
 
     pub fn create(gpa: Allocator, client: *Client, gfx: *Gfx) !*Panel {
         const panel = try gpa.create(Panel);
@@ -45,9 +55,43 @@ pub const Panel = struct {
     }
 
     pub fn destroy(self: *Panel) void {
+        if (self.target) |target| {
+            self.gfx.destroySurface(target.surface);
+            target.window.destroy();
+        }
+
         self.layer_surface.destroy();
         self.surface.destroy();
         self.gpa.destroy(self);
+    }
+
+    pub fn draw(self: *Panel) !void {
+        self.needs_redraw = false;
+        if (!self.configured) return;
+
+        if (self.target == null) try self.createTarget();
+        const target = &self.target.?;
+
+        if (target.width != self.width or target.height != self.height) {
+            target.window.resize(@intCast(self.width), @intCast(self.height), 0, 0);
+            target.width = self.width;
+            target.height = self.height;
+        }
+
+        gl.Viewport(0, 0, @intCast(target.width), @intCast(target.height));
+        gl.ClearColor(0.074, 0.074, 0.092, 1.0);
+        gl.Clear(gl.COLOR_BUFFER_BIT);
+
+        try self.gfx.swap(target.surface);
+    }
+
+    fn createTarget(self: *Panel) !void {
+        const window = try wl.EglWindow.create(self.surface, @intCast(self.width), @intCast(self.height));
+        errdefer window.destroy();
+        const surface = try self.gfx.createSurface(window);
+        errdefer self.gfx.destroySurface(surface);
+        try self.gfx.bind(surface);
+        self.target = .{ .window = window, .surface = surface, .width = self.width, .height = self.height };
     }
 };
 

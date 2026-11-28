@@ -60,6 +60,19 @@ const State = struct {
         const panel = self.panel orelse return false;
         return panel.closed or panel.needs_redraw;
     }
+
+    fn tick(self: *State) void {
+        const panel = self.panel orelse return;
+        if (panel.closed) {
+            log.info("compositor closed the panel", .{});
+            self.hide();
+        } else if (panel.needs_redraw) {
+            panel.draw() catch |err| {
+                log.err("draw failed: {t}", .{err});
+                self.hide();
+            };
+        }
+    }
 };
 
 pub fn runDaemon(gpa: Allocator, io: Io, path: []const u8) !void {
@@ -88,18 +101,28 @@ pub fn runDaemon(gpa: Allocator, io: Io, path: []const u8) !void {
     defer state.hide();
 
     while (!state.quit) {
+        const wl_events = try client.beginWait();
+
         var fds = [_]posix.pollfd{
             .{ .fd = wake_fd, .events = posix.POLL.IN, .revents = 0 },
             .{ .fd = server.fd(), .events = posix.POLL.IN, .revents = 0 },
+            .{ .fd = client.fd(), .events = wl_events, .revents = 0 },
         };
 
         const timeout: i32 = if (state.hasWork()) 0 else -1;
         _ = posix.poll(&fds, timeout) catch 0;
 
+        client.endWait(fds[2].revents) catch |err| {
+            log.err("lost connection to the compositor: {t}", .{err});
+            return err;
+        };
+
         if (fds[0].revents != 0) {
             log.info("signal received", .{});
             break;
         }
+
+        state.tick();
 
         if (fds[1].revents & posix.POLL.IN != 0) {
             var req: ipc.Server.Request = undefined;

@@ -1,4 +1,5 @@
 const std = @import("std");
+const posix = std.posix;
 const log = std.log.scoped(.client);
 
 const wayland = @import("wayland");
@@ -45,6 +46,37 @@ pub const Client = struct {
         self.layer_shell.destroy();
         self.compositor.destroy();
         self.display.disconnect();
+    }
+
+    pub fn fd(self: *const Client) posix.fd_t {
+        return self.display.getFd();
+    }
+
+    pub fn beginWait(self: *Client) !i16 {
+        while (!self.display.prepareRead()) {
+            if (self.display.dispatchPending() != .SUCCESS) return error.DispatchFailed;
+        }
+
+        var events: i16 = posix.POLL.IN;
+        switch (self.display.flush()) {
+            .SUCCESS => {},
+            .AGAIN => events |= posix.POLL.OUT,
+            else => {
+                self.display.cancelRead();
+                return error.FlushFailed;
+            },
+        }
+        return events;
+    }
+
+    pub fn endWait(self: *Client, revents: i16) !void {
+        const readable = posix.POLL.IN | posix.POLL.HUP | posix.POLL.ERR;
+        if (revents & readable != 0) {
+            if (self.display.readEvents() != .SUCCESS) return error.ReadFailed;
+        } else {
+            self.display.cancelRead();
+        }
+        if (self.display.dispatchPending() != .SUCCESS) return error.DispatchFailed;
     }
 };
 
