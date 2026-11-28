@@ -7,6 +7,7 @@ const log = std.log.scoped(.daemon);
 
 const ipc = @import("ipc.zig");
 const Client = @import("client.zig").Client;
+const Panel = @import("panel.zig").Panel;
 
 var wake_fd: posix.fd_t = -1;
 
@@ -18,20 +19,26 @@ fn onSignal(_: posix.SIG) callconv(.c) void {
 const State = struct {
     gpa: Allocator,
     client: *Client,
+    panel: ?*Panel = null,
 
     visible: bool = false,
     quit: bool = false,
 
-    fn handle(s: *State, cmd: ipc.Command) []const u8 {
+    fn handle(self: *State, cmd: ipc.Command) []const u8 {
         switch (cmd) {
-            .toggle => s.visible = !s.visible,
-            .show => s.visible = true,
-            .hide => s.visible = false,
-            .quit => s.quit = true,
+            .toggle => self.visible = !self.visible,
+            .show => self.visible = true,
+            .hide => self.visible = false,
+            .quit => self.quit = true,
             .status => {},
         }
         if (cmd == .quit) return "ok quitting";
-        return if (s.visible) "ok visible" else "ok hidden";
+        return if (self.visible) "ok visible" else "ok hidden";
+    }
+
+    fn hasWork(self: *const State) bool {
+        const panel = self.panel orelse return false;
+        return panel.closed or panel.needs_redraw;
     }
 };
 

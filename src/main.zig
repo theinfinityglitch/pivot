@@ -38,7 +38,7 @@ pub fn main(init: std.process.Init) !void {
 
     // `pivot` -> start the daemon
     if (args.len == 1) {
-        daemon.runDaemon(io, path) catch |err| switch (err) {
+        daemon.runDaemon(init.gpa, io, path) catch |err| switch (err) {
             error.AlreadyRunning => fail("pivot is already running", .{}),
             else => return err,
         };
