@@ -24,16 +24,34 @@ const State = struct {
     visible: bool = false,
     quit: bool = false,
 
+    fn show(self: *State) bool {
+        if (self.panel != null) return true;
+        self.panel = Panel.create(self.gpa, self.client) catch |err| {
+            log.err("could not open the panel: {t}", .{err});
+            return false;
+        };
+        return true;
+    }
+
+    fn hide(self: *State) void {
+        const panel = self.panel orelse return;
+        panel.destroy();
+        self.panel = null;
+    }
+
     fn handle(self: *State, cmd: ipc.Command) []const u8 {
+        const open_failed = "error could not open the surface";
         switch (cmd) {
-            .toggle => self.visible = !self.visible,
-            .show => self.visible = true,
-            .hide => self.visible = false,
-            .quit => self.quit = true,
+            .toggle => if (self.panel != null) self.hide() else if (!self.show()) return open_failed,
+            .show => if (!self.show()) return open_failed,
+            .hide => self.hide(),
+            .quit => {
+                self.quit = true;
+                return "ok quitting";
+            },
             .status => {},
         }
-        if (cmd == .quit) return "ok quitting";
-        return if (self.visible) "ok visible" else "ok hidden";
+        return if (self.panel != null) "ok visible" else "ok hidden";
     }
 
     fn hasWork(self: *const State) bool {
@@ -63,6 +81,7 @@ pub fn runDaemon(gpa: Allocator, io: Io, path: []const u8) !void {
     log.info("listening on {s}", .{path});
 
     var state: State = .{ .gpa = gpa, .client = &client };
+    defer state.hide();
 
     while (!state.quit) {
         var fds = [_]posix.pollfd{
@@ -70,9 +89,7 @@ pub fn runDaemon(gpa: Allocator, io: Io, path: []const u8) !void {
             .{ .fd = server.fd(), .events = posix.POLL.IN, .revents = 0 },
         };
 
-        // hasWork not implemented yet
         const timeout: i32 = if (state.hasWork()) 0 else -1;
-
         _ = posix.poll(&fds, timeout) catch 0;
 
         if (fds[0].revents != 0) {
