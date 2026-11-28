@@ -4,6 +4,7 @@ const log = std.log.scoped(.gfx);
 const wayland = @import("wayland");
 const wl = wayland.client.wl;
 const egl = @import("egl.zig");
+const gl = @import("gl");
 
 pub const Gfx = struct {
     display: egl.Display,

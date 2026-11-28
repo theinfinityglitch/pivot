@@ -14,6 +14,12 @@ pub fn build(b: *std.Build) void {
 
     const wayland = b.createModule(.{ .root_source_file = scanner.result });
 
+    const gl = @import("zigglgen").generateModule(b, .{
+        .api = .gl,
+        .version = .@"3.3",
+        .profile = .core,
+    });
+
     const exe = b.addExecutable(.{
         .name = "pivot",
         .root_module = b.createModule(.{
@@ -21,7 +27,10 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
-            .imports = &.{.{ .name = "wayland", .module = wayland }},
+            .imports = &.{
+                .{ .name = "wayland", .module = wayland },
+                .{ .name = "gl", .module = gl },
+            },
         }),
     });
 
