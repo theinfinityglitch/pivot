@@ -8,6 +8,7 @@ const log = std.log.scoped(.daemon);
 const ipc = @import("ipc.zig");
 const Client = @import("client.zig").Client;
 const Panel = @import("panel.zig").Panel;
+const Gfx = @import("gfx.zig").Gfx;
 
 var wake_fd: posix.fd_t = -1;
 
@@ -75,6 +76,8 @@ pub fn runDaemon(gpa: Allocator, io: Io, path: []const u8) !void {
 
     var client = try Client.init();
     defer client.deinit();
+    var gfx = try Gfx.init(client.display);
+    defer gfx.deinit();
 
     var server = try ipc.Server.init(io, path);
     defer server.deinit(); // closes the listener and removes the socket file
