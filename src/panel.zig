@@ -21,7 +21,7 @@ pub const Panel = struct {
 
     pub fn create(gpa: Allocator, client: *Client) !*Panel {
         const panel = try gpa.create(Panel);
-        defer gpa.destroy(panel);
+        errdefer gpa.destroy(panel);
 
         const surface = try client.compositor.createSurface();
         errdefer surface.destroy();
@@ -30,7 +30,7 @@ pub const Panel = struct {
         errdefer layer_surface.destroy();
 
         panel.* = .{ .gpa = gpa, .surface = surface, .layer_surface = layer_surface };
-        layer_surface.setListener(Panel, layerSurfaceListener, panel);
+        layer_surface.setListener(*Panel, layerSurfaceListener, panel);
 
         layer_surface.setSize(640, 360);
         layer_surface.setAnchor(.{});
@@ -42,14 +42,14 @@ pub const Panel = struct {
         return panel;
     }
 
-    fn destroy(self: *Panel) void {
+    pub fn destroy(self: *Panel) void {
         self.layer_surface.destroy();
         self.surface.destroy();
         self.gpa.destroy(self);
     }
 };
 
-fn layerSurfaceListener(layer_surface: zwlr.LayerSurfaceV1, event: zwlr.LayerSurfaceV1.Event, panel: *Panel) void {
+fn layerSurfaceListener(layer_surface: *zwlr.LayerSurfaceV1, event: zwlr.LayerSurfaceV1.Event, panel: *Panel) void {
     switch (event) {
         .configure => |c| {
             panel.width = if (c.width != 0) c.width else 640;
