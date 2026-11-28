@@ -8,6 +8,10 @@
             .url = "git+https://codeberg.org/ifreund/zig-wayland?ref=main#94db7ba4e0a6b4780a16dbc74c7a2c88f1ebf502",
             .hash = "wayland-0.8.0-dev-lQa1kuf8AQCeoam8G-XPyaIYvIOk3_wgsspwi4nT_L5q",
         },
+        .zigglgen = .{
+            .url = "git+https://github.com/castholm/zigglgen?ref=master#41963ef61c7bf7099123332ece8e0633ab50ee6d",
+            .hash = "zigglgen-0.6.0-ziggli7MLwAs8tDn3K7yI_GLDra1zd1tNoUidz2e2IMd",
+        },
     },
     .paths = .{
         "build.zig",

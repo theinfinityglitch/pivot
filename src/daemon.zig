@@ -20,6 +20,7 @@ fn onSignal(_: posix.SIG) callconv(.c) void {
 const State = struct {
     gpa: Allocator,
     client: *Client,
+    gfx: *Gfx,
     panel: ?*Panel = null,
 
     visible: bool = false,
@@ -27,7 +28,7 @@ const State = struct {
 
     fn show(self: *State) bool {
         if (self.panel != null) return true;
-        self.panel = Panel.create(self.gpa, self.client) catch |err| {
+        self.panel = Panel.create(self.gpa, self.client, self.gfx) catch |err| {
             log.err("could not open the panel: {t}", .{err});
             return false;
         };
@@ -83,7 +84,7 @@ pub fn runDaemon(gpa: Allocator, io: Io, path: []const u8) !void {
     defer server.deinit(); // closes the listener and removes the socket file
     log.info("listening on {s}", .{path});
 
-    var state: State = .{ .gpa = gpa, .client = &client };
+    var state: State = .{ .gpa = gpa, .client = &client, .gfx = &gfx };
     defer state.hide();
 
     while (!state.quit) {

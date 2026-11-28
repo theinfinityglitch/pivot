@@ -6,9 +6,11 @@ const wayland = @import("wayland");
 const wl = wayland.client.wl;
 const zwlr = wayland.client.zwlr;
 const Client = @import("client.zig").Client;
+const Gfx = @import("gfx.zig").Gfx;
 
 pub const Panel = struct {
     gpa: Allocator,
+    gfx: *Gfx,
 
     surface: *wl.Surface,
     layer_surface: *zwlr.LayerSurfaceV1,
@@ -19,7 +21,7 @@ pub const Panel = struct {
     width: u32 = 640,
     height: u32 = 360,
 
-    pub fn create(gpa: Allocator, client: *Client) !*Panel {
+    pub fn create(gpa: Allocator, client: *Client, gfx: *Gfx) !*Panel {
         const panel = try gpa.create(Panel);
         errdefer gpa.destroy(panel);
 
@@ -29,7 +31,7 @@ pub const Panel = struct {
         const layer_surface = try client.layer_shell.getLayerSurface(surface, null, .overlay, "pivot");
         errdefer layer_surface.destroy();
 
-        panel.* = .{ .gpa = gpa, .surface = surface, .layer_surface = layer_surface };
+        panel.* = .{ .gpa = gpa, .gfx = gfx, .surface = surface, .layer_surface = layer_surface };
         layer_surface.setListener(*Panel, layerSurfaceListener, panel);
 
         layer_surface.setSize(640, 360);
